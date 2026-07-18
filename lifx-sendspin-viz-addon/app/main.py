@@ -44,24 +44,45 @@ def load_config() -> Dict[str, Any]:
     else:
         data = {}
 
-    # Merge with environment variables (environment takes priority)
+    def safe_float(key: str, default: float) -> float:
+        val = os.getenv(key, str(data.get(key, default)))
+        try:
+            return float(val) if val.strip() else default
+        except (ValueError, TypeError):
+            return default
+
+    def safe_int(key: str, default: int) -> int:
+        val = os.getenv(key, str(data.get(key, default)))
+        try:
+            return int(val) if val.strip() else default
+        except (ValueError, TypeError):
+            return default
+
+    def safe_bool(key: str, default: bool) -> bool:
+        val = os.getenv(key, str(data.get(key, default))).lower()
+        if val in ("true", "1", "yes"):
+            return True
+        if val in ("false", "0", "no"):
+            return False
+        return default
+
     return {
         "sendspin_url": os.getenv("SENDSPIN_URL", data.get("sendspin_url", "ws://homeassistant.local:8927/sendspin")),
         "client_name": os.getenv("CLIENT_NAME", data.get("client_name", "LIFX Visualizer")),
-        "lifx_discover_all": os.getenv("DISCOVER_ALL", str(data.get("lifx_discover_all", True))).lower() == "true",
+        "lifx_discover_all": safe_bool("DISCOVER_ALL", data.get("lifx_discover_all", True)),
         "lifx_light_labels": json.loads(os.getenv("LIGHT_LABELS", json.dumps(data.get("lifx_light_labels", [])))),
         "lifx_mac_addresses": json.loads(os.getenv("MAC_ADDRESSES", json.dumps(data.get("lifx_mac_addresses", [])))),
         "effect": os.getenv("EFFECT", data.get("effect", "energy_pulse")),
-        "sensitivity": float(os.getenv("SENSITIVITY", data.get("sensitivity", 1.0))),
-        "update_rate_hz": int(os.getenv("UPDATE_RATE", data.get("update_rate_hz", 12))),
-        "brightness_min": int(os.getenv("BRIGHTNESS_MIN", data.get("brightness_min", 5))),
-        "brightness_max": int(os.getenv("BRIGHTNESS_MAX", data.get("brightness_max", 100))),
-        "flash_on_beat": os.getenv("FLASH_ON_BEAT", str(data.get("flash_on_beat", True))).lower() == "true",
-        "enabled": os.getenv("ENABLED", str(data.get("enabled", True))).lower() == "true",
-        "spectrum_bins": int(os.getenv("SPECTRUM_BINS", data.get("spectrum_bins", 8))),
+        "sensitivity": safe_float("SENSITIVITY", data.get("sensitivity", 1.0)),
+        "update_rate_hz": safe_int("UPDATE_RATE", data.get("update_rate_hz", 12)),
+        "brightness_min": safe_int("BRIGHTNESS_MIN", data.get("brightness_min", 5)),
+        "brightness_max": safe_int("BRIGHTNESS_MAX", data.get("brightness_max", 100)),
+        "flash_on_beat": safe_bool("FLASH_ON_BEAT", data.get("flash_on_beat", True)),
+        "enabled": safe_bool("ENABLED", data.get("enabled", True)),
+        "spectrum_bins": safe_int("SPECTRUM_BINS", data.get("spectrum_bins", 8)),
         "spectrum_scale": os.getenv("SPECTRUM_SCALE", data.get("spectrum_scale", "mel")),
-        "f_min": int(os.getenv("F_MIN", data.get("f_min", 20))),
-        "f_max": int(os.getenv("F_MAX", data.get("f_max", 20000))),
+        "f_min": safe_int("F_MIN", data.get("f_min", 20)),
+        "f_max": safe_int("F_MAX", data.get("f_max", 20000)),
     }
 
 
