@@ -1,7 +1,0 @@
-aiosendspin>=5.0
-lifxlan>=1.2.0
-nicegui>=1.4.0
-paho-mqtt>=2.0
-python-dotenv>=1.0
-rich>=13.0
-watchdog>=4.0  # for config hot-reload
