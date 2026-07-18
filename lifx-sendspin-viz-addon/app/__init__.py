@@ -1,0 +1,1 @@
+"""LIFX SendSpin Music Visualizer Add-on"""
