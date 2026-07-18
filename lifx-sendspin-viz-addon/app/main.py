@@ -22,11 +22,14 @@ from .smoothing import VisualizationSmoother
 import paho.mqtt.client as mqtt
 import os
 
-# Load config from environment variables
-SENDSPIN_URL = os.getenv("SENDSPIN_URL", "ws://localhost:8927/sendspin")
-CLIENT_NAME  = os.getenv("CLIENT_NAME", "LIFX Visualizer")
-EFFECT       = os.getenv("EFFECT", "energy_pulse")
-SENSITIVITY  = float(os.getenv("SENSITIVITY", "1.0"))
+# Load config from environment variables (robust version)
+SENDSPIN_URL = os.getenv("SENDSPIN_URL") or "ws://localhost:8927/sendspin"
+CLIENT_NAME  = os.getenv("CLIENT_NAME")  or "LIFX Visualizer"
+EFFECT       = os.getenv("EFFECT")       or "energy_pulse"
+
+# Safe float conversion
+sensitivity_str = os.getenv("SENSITIVITY", "1.0")
+SENSITIVITY = float(sensitivity_str) if sensitivity_str.strip() else 1.0
 
 logging.basicConfig(
     level=logging.INFO,
