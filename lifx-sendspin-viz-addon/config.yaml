@@ -34,3 +34,47 @@ options:
   decay: 0.75
   hue_shift: 0
   enabled: true
+schema:
+  sendspin_url: str
+  client_name: str
+  lifx_discover_all: bool
+  lifx_light_labels:
+    type: list
+    items:
+      type: str
+  lifx_mac_addresses:
+    type: list
+    items:
+      type: str
+  effect:
+    type: list
+    options:
+      - energy_pulse
+      - spectrum_bands
+      - dominant_hue
+      - beat_strobe
+      - rainbow_energy
+      - bass_punch
+      - frequency_sweep
+      - calm_ambient
+      - party_strobe
+      - custom
+  sensitivity: float(0.1, 5.0)
+  update_rate_hz: int(5, 30)
+  brightness_min: int(0, 100)
+  brightness_max: int(0, 100)
+  flash_on_beat: bool
+  flash_duration_ms: int(20, 500)
+  spectrum_bins: int(4, 32)
+  spectrum_scale:
+    type: list
+    options:
+      - mel
+      - log
+      - lin
+  f_min: int(10, 1000)
+  f_max: int(1000, 22000)
+  decay: float(0.1, 0.99)
+  hue_shift: int(0, 360)
+  enabled: bool
+  
