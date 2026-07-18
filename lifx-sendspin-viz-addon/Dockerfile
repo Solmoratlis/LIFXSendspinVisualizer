@@ -5,6 +5,10 @@ RUN apk add --no-cache python3 py3-pip
 
 WORKDIR /app
 
+# Copy the Python application code
+COPY app/ /app/app/
+
+# Copy and prepare run.sh
 COPY run.sh /app/run.sh
 RUN chmod +x /app/run.sh
 
