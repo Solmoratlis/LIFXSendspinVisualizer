@@ -5,7 +5,6 @@ set -e
 
 echo "Starting LIFX SendSpin Music Visualizer Add-on..."
 
-# Load configuration (with fallback for local testing)
 if command -v bashio &> /dev/null; then
     SENDSPIN_URL=$(bashio::config 'sendspin_url')
     CLIENT_NAME=$(bashio::config 'client_name')
@@ -23,5 +22,4 @@ export SENDSPIN_URL CLIENT_NAME EFFECT SENSITIVITY
 echo "SendSpin URL: $SENDSPIN_URL"
 echo "Effect: $EFFECT | Sensitivity: $SENSITIVITY"
 
-# Start the Python application
 exec python3 -m app.main
