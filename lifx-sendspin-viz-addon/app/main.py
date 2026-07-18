@@ -194,14 +194,14 @@ class LifxSendspinVizApp:
                 # Health check
                 if self.sendspin and not getattr(self.sendspin, "is_connected", False):
                 logger.warning("SendSpin disconnected — attempting reconnect...")
-                try:
-                    await self.sendspin.connect()
-                except Exception as e:
+                    try:
+                        await self.sendspin.connect()
+                    except Exception as e:
                     logger.error(f"Reconnect failed: {e}")
-        except asyncio.CancelledError:
-            pass
-        finally:
-            await self.shutdown()
+            except asyncio.CancelledError:
+                pass
+            finally:
+                await self.shutdown()
 
     async def shutdown(self):
         logger.info("Shutting down...")
