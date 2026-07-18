@@ -84,9 +84,6 @@ class LifxSendspinVizApp:
 
         # SendSpin Visualizer Client (aiosendspin powered)
         self.sendspin = SendspinVisualizerClient(
-           import os
-
-# Load config from environment variables (set by run.sh)
 SENDSPIN_URL = os.getenv("SENDSPIN_URL", "ws://localhost:8927/sendspin")
 CLIENT_NAME = os.getenv("CLIENT_NAME", "LIFX Visualizer")
 EFFECT = os.getenv("EFFECT", "energy_pulse")
