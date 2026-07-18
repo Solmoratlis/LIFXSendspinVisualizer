@@ -84,7 +84,7 @@ class LifxSendspinVizApp:
 
         # SendSpin Visualizer Client (aiosendspin powered)
         self.sendspin = SendspinVisualizerClient(
-            url=self.config["sendspin_url"],
+            url=os.environ.get("SENDSPIN_URL", "ws://localhost:8927/sendspin"),
             client_name=self.config["client_name"],
             visualizer_support={
                 "types": ["loudness", "beat", "f_peak", "spectrum", "peak"],
