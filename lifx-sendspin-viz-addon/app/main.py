@@ -190,7 +190,7 @@ class LifxSendspinVizApp:
          await self.setup()
 
         # Main loop - Sendspin client runs its own tasks internally
-        try:
+         try:
             while self.running:
                 await asyncio.sleep(5)
                 # Periodic health check / reconnect logic could go here
