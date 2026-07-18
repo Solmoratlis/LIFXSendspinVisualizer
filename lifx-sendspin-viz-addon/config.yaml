@@ -13,6 +13,7 @@ ingress: true
 ingress_port: 8099
 panel_icon: mdi:lightbulb-multiple
 panel_title: LIFX Music Viz
+
 options:
   sendspin_url: "ws://homeassistant.local:8927/sendspin"
   client_name: "LIFX Visualizer Add-on"
