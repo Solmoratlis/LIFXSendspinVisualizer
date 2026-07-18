@@ -226,23 +226,25 @@ async def main():
     await app.run()
 
 
-if __name__ == "__main__":
-    from nicegui import ui
+async def run_status_server(self):
+    """Start the NiceGUI web UI for Home Assistant Ingress."""
+    create_ui(self)
 
-    async def startup():
-        app = LifxSendspinVizApp()
-        await app.setup()
-        # Keep the main loop alive
-        while app.running:
-            await asyncio.sleep(1)
+    def start_nicegui():
+        from nicegui import ui
 
-    ui.timer(1.0, startup, once=True)
-   ui.run(
-    host="0.0.0.0",
-    port=8099,
-    title="LIFX SendSpin Music Visualizer",
-    reload=False,
-    show=False,
-    dark=True,
-    storage_secret="some-random-string-here",
-)
+        ui.run(
+            host="0.0.0.0",
+            port=8099,
+            title="LIFX SendSpin Music Visualizer",
+            reload=False,
+            show=False,           # Important for ingress
+            dark=True,
+            storage_secret="lifx-sendspin-secret-12345",  # Change this to something random
+            # These help with ingress / reverse proxy
+            uvicorn_logging_level="warning",
+        )
+
+    import threading
+    threading.Thread(target=start_nicegui, daemon=True).start()
+    logger.info("NiceGUI web UI started on port 8099 (for Ingress)")
