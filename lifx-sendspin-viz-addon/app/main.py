@@ -89,17 +89,15 @@ CLIENT_NAME = os.getenv("CLIENT_NAME", "LIFX Visualizer")
 EFFECT = os.getenv("EFFECT", "energy_pulse")
 SENSITIVITY = float(os.getenv("SENSITIVITY", "1.0"))
 ENABLED = os.getenv("ENABLED", "true").lower() == "true"
-            visualizer_support={
+            visualizer_support=
                 "types": ["loudness", "beat", "f_peak", "spectrum", "peak"],
                 "buffer_capacity": 65536,
                 "rate_max": self.config.get("update_rate_hz", 12),
-                "spectrum": {
+                "spectrum": 
                     "n_disp_bins": self.config.get("spectrum_bins", 8),
                     "scale": self.config.get("spectrum_scale", "mel"),
                     "f_min": self.config.get("f_min", 20),
-                    "f_max": self.config.get("f_max", 20000),
-                },
-            },
+                    "f_max": self.config.get("f_max", 20000),            
         
 
         # Wire callbacks
