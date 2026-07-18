@@ -187,17 +187,21 @@ class LifxSendspinVizApp:
         logger.info("NiceGUI web UI started on port 8099")
 
     async def run(self):
-        await self.setup()
-        try:
-            while self.running:
-                await asyncio.sleep(5)
-                if self.sendspin and not self.sendspin.is_connected():
-                    logger.warning("SendSpin disconnected — reconnecting...")
+    await self.setup()
+    try:
+        while self.running:
+            await asyncio.sleep(5)
+            # Health check
+            if self.sendspin and not getattr(self.sendspin, "is_connected", False):
+                logger.warning("SendSpin disconnected — attempting reconnect...")
+                try:
                     await self.sendspin.connect()
-        except asyncio.CancelledError:
-            pass
-        finally:
-            await self.shutdown()
+                except Exception as e:
+                    logger.error(f"Reconnect failed: {e}")
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await self.shutdown()
 
     async def shutdown(self):
         logger.info("Shutting down...")
