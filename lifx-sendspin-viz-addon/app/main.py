@@ -83,7 +83,7 @@ class LifxSendspinVizApp:
         viz_state["lights"] = light_names
 
         # SendSpin Visualizer Client (aiosendspin powered)
-        self.sendspin = SendspinVisualizerClient(
+        self.sendspin = SendspinVisualizerClient
 SENDSPIN_URL = os.getenv("SENDSPIN_URL", "ws://localhost:8927/sendspin")
 CLIENT_NAME = os.getenv("CLIENT_NAME", "LIFX Visualizer")
 EFFECT = os.getenv("EFFECT", "energy_pulse")
@@ -100,7 +100,7 @@ ENABLED = os.getenv("ENABLED", "true").lower() == "true"
                     "f_max": self.config.get("f_max", 20000),
                 },
             },
-        )
+        
 
         # Wire callbacks
         self.sendspin.on_visualization = self.handle_visualization_data
