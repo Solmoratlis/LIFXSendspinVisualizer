@@ -194,7 +194,7 @@ class LifxSendspinVizApp:
             while self.running:
                 await asyncio.sleep(5)
                 # Periodic health check / reconnect logic could go here
-                if self.sendspin and not self.sendspin.is_connected():
+                if self.sendspin and not getattr(self.sendspin, "is_connected", False):
                     logger.warning("SendSpin disconnected — attempting reconnect...")
                     await self.sendspin.connect()
          except asyncio.CancelledError:
