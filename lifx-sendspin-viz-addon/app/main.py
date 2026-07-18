@@ -237,11 +237,12 @@ if __name__ == "__main__":
             await asyncio.sleep(1)
 
     ui.timer(1.0, startup, once=True)
-    ui.run(
-        host="0.0.0.0",
-        port=8099,
-        title="LIFX SendSpin Music Visualizer",
-        reload=False,
-        show=False,
-        dark=True,
-    )
+   ui.run(
+    host="0.0.0.0",
+    port=8099,
+    title="LIFX SendSpin Music Visualizer",
+    reload=False,
+    show=False,
+    dark=True,
+    storage_secret="some-random-string-here",
+)
