@@ -1,0 +1,10 @@
+# Automatically normalize line endings
+* text=auto
+
+# Shell scripts must use LF
+*.sh text eol=lf
+
+# Config and Docker files
+*.yaml text eol=lf
+Dockerfile text eol=lf
+run.sh text eol=lf
