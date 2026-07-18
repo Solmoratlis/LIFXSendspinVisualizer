@@ -1,6 +1,6 @@
 name: LIFX SendSpin Music Visualizer
 version: "0.1.0"
-slug: lifx_sendspin_viz
+slug: lifx_sendspin_viz_addon
 description: Synchronized music visualization for LIFX lights using Music Assistant + SendSpin protocol (visualizer role)
 url: https://github.com/Solmoralis/LIFXSendspinVisualizer
 arch:
