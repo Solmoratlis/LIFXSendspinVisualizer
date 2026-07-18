@@ -1,0 +1,31 @@
+music_assistant:
+server_ip: "192.168.86.129
+sendspin_port: 8927
+
+lights:
+beams:
+- "Backlight beam right" 
+- "Backlight beam left"
+downlights:
+- "Living Room Ceiling Left 1"
+- "Living Room Ceiling Left 2"
+- "Living Room Ceiling Left 3"
+- "Living Room Ceiling Left 4"
+- "Living Room Ceiling Right 1"
+- "Living Room Ceiling Right 2"
+- "Living Room Ceiling Right 3"
+- "Living Room Ceiling Right 4"
+
+mapping:
+mode: "advanced"
+bass_hue: 0
+mid_hue: 120
+high_hue: 240
+beat_pulse_duration_ms: 120
+energy_brightness_mult: 1.3
+beam_zone_count: 10
+update_rate_hz: 25
+
+performance:
+max_messages_per_sec: 18
+default_transition_ms: 70
