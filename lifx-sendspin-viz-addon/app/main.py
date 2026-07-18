@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
 LIFX SendSpin Music Visualizer - Main Application
-Connects to Music Assistant SendSpin server as visualizer client and drives LIFX lights.
 """
-
 import asyncio
 import json
 import logging
@@ -13,21 +11,20 @@ import time
 from typing import Any, Dict, List, Optional
 
 from lifxlan import LifxLAN
-
 from .lifx_controller import LifxController
 from .effects import get_effect_mapper
 from .sendspin_client import SendspinVisualizerClient
 from .web_ui import create_ui, update_viz_data, viz_state
 from .smoothing import VisualizationSmoother
 import paho.mqtt.client as mqtt
-import os
 
-# Load config from environment variables (robust version)
+# =============================================================================
+# CONFIGURATION (from environment variables set by run.sh)
+# =============================================================================
 SENDSPIN_URL = os.getenv("SENDSPIN_URL") or "ws://localhost:8927/sendspin"
-CLIENT_NAME  = os.getenv("CLIENT_NAME")  or "LIFX Visualizer"
-EFFECT       = os.getenv("EFFECT")       or "energy_pulse"
+CLIENT_NAME = os.getenv("CLIENT_NAME") or "LIFX Visualizer"
+EFFECT = os.getenv("EFFECT") or "energy_pulse"
 
-# Safe float conversion
 sensitivity_str = os.getenv("SENSITIVITY", "1.0")
 SENSITIVITY = float(sensitivity_str) if sensitivity_str.strip() else 1.0
 
@@ -37,27 +34,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger("lifx-sendspin-viz")
 
-# Load config from env or options.json (set by run.sh / Supervisor)
+
 def load_config() -> Dict[str, Any]:
+    """Load config from options.json or fallback to environment variables."""
     config_path = "/data/options.json"
     if os.path.exists(config_path):
         with open(config_path) as f:
-            return json.load(f)
-    # Dev fallback
+            data = json.load(f)
+    else:
+        data = {}
+
+    # Merge with environment variables (environment takes priority)
     return {
-        "sendspin_url": os.getenv("SENDSPIN_URL", "ws://homeassistant.local:8927/sendspin"),
-        "client_name": os.getenv("CLIENT_NAME", "LIFX Visualizer"),
-        "lifx_discover_all": os.getenv("DISCOVER_ALL", "true").lower() == "true",
-        "lifx_light_labels": json.loads(os.getenv("LIGHT_LABELS", "[]")),
-        "effect": os.getenv("EFFECT", "energy_pulse"),
-        "sensitivity": float(os.getenv("SENSITIVITY", "1.0")),
-        "update_rate_hz": int(os.getenv("UPDATE_RATE", "12")),
-        "brightness_min": int(os.getenv("BRIGHTNESS_MIN", "5")),
-        "brightness_max": int(os.getenv("BRIGHTNESS_MAX", "100")),
-        "flash_on_beat": os.getenv("FLASH_ON_BEAT", "true").lower() == "true",
-        "enabled": os.getenv("ENABLED", "true").lower() == "true",
-        "spectrum_bins": 8,
-        "spectrum_scale": "mel",
+        "sendspin_url": os.getenv("SENDSPIN_URL", data.get("sendspin_url", "ws://homeassistant.local:8927/sendspin")),
+        "client_name": os.getenv("CLIENT_NAME", data.get("client_name", "LIFX Visualizer")),
+        "lifx_discover_all": os.getenv("DISCOVER_ALL", str(data.get("lifx_discover_all", True))).lower() == "true",
+        "lifx_light_labels": json.loads(os.getenv("LIGHT_LABELS", json.dumps(data.get("lifx_light_labels", [])))),
+        "lifx_mac_addresses": json.loads(os.getenv("MAC_ADDRESSES", json.dumps(data.get("lifx_mac_addresses", [])))),
+        "effect": os.getenv("EFFECT", data.get("effect", "energy_pulse")),
+        "sensitivity": float(os.getenv("SENSITIVITY", data.get("sensitivity", 1.0))),
+        "update_rate_hz": int(os.getenv("UPDATE_RATE", data.get("update_rate_hz", 12))),
+        "brightness_min": int(os.getenv("BRIGHTNESS_MIN", data.get("brightness_min", 5))),
+        "brightness_max": int(os.getenv("BRIGHTNESS_MAX", data.get("brightness_max", 100))),
+        "flash_on_beat": os.getenv("FLASH_ON_BEAT", str(data.get("flash_on_beat", True))).lower() == "true",
+        "enabled": os.getenv("ENABLED", str(data.get("enabled", True))).lower() == "true",
+        "spectrum_bins": int(os.getenv("SPECTRUM_BINS", data.get("spectrum_bins", 8))),
+        "spectrum_scale": os.getenv("SPECTRUM_SCALE", data.get("spectrum_scale", "mel")),
+        "f_min": int(os.getenv("F_MIN", data.get("f_min", 20))),
+        "f_max": int(os.getenv("F_MAX", data.get("f_max", 20000))),
     }
 
 
@@ -88,14 +92,13 @@ class LifxSendspinVizApp:
         await self.lifx.discover_and_connect()
         logger.info(f"Discovered {len(self.lifx.lights)} LIFX light(s)")
 
-        # Push initial lights list to web UI
         light_names = [light.get_label() or light.mac_addr for light in self.lifx.lights]
         viz_state["lights"] = light_names
 
-        # SendSpin Visualizer Client (aiosendspin powered)
+        # SendSpin Client
         self.sendspin = SendspinVisualizerClient(
             url=SENDSPIN_URL,
-            client_name=self.config["client_name"],
+            client_name=CLIENT_NAME,
             visualizer_support={
                 "types": ["loudness", "beat", "f_peak", "spectrum", "peak"],
                 "buffer_capacity": 65536,
@@ -109,7 +112,6 @@ class LifxSendspinVizApp:
             },
         )
 
-        # Wire callbacks
         self.sendspin.on_visualization = self.handle_visualization_data
         self.sendspin.on_stream_start = self.on_stream_start
         self.sendspin.on_stream_end = self.on_stream_end
@@ -117,47 +119,37 @@ class LifxSendspinVizApp:
         await self.sendspin.connect()
         logger.info("Connected to SendSpin server as visualizer")
 
-        # Simple status web server for ingress
+        # Start NiceGUI web UI
         asyncio.create_task(self.run_status_server())
 
     async def handle_visualization_data(self, data: Dict[str, Any]):
-        """Called by Sendspin client for every visualization frame."""
         if not self.config.get("enabled", True) or not self.lifx:
             return
 
         self.last_viz_data = data
         self.stats["frames"] += 1
 
-        # Push live data to the NiceGUI web UI
         update_viz_data(data, self.stats, connected=True)
 
-        # Map to LIFX commands via effect
         commands = self.effect_mapper(data, self.config)
-
         if commands:
             await self.lifx.apply_visualization(commands)
             self.stats["updates_sent"] += 1
 
-        # Optional: log occasionally
         if self.stats["frames"] % 50 == 0:
-            logger.debug(f"Stats: {self.stats} | Last loudness: {data.get('loudness')}")
+            logger.debug(f"Stats: {self.stats}")
 
     def on_stream_start(self, info: Dict):
         logger.info(f"SendSpin stream started: {info}")
-        # Could set lights to a "viz active" scene here
 
     def on_stream_end(self):
-        logger.info("SendSpin stream ended — restoring previous light states (if saved)")
+        logger.info("SendSpin stream ended — restoring previous light states")
         if self.lifx:
             asyncio.create_task(self.lifx.restore_previous_states())
 
     async def run_status_server(self):
-        """Advanced NiceGUI web UI for ingress (real-time spectrum, controls, live metrics)."""
-        # NiceGUI will serve on port 8099
         create_ui(self)
 
-        # Start NiceGUI in the existing event loop (non-blocking)
-        # We run it as a background task so the main loop can continue
         def start_nicegui():
             from nicegui import ui
             ui.run(
@@ -165,25 +157,21 @@ class LifxSendspinVizApp:
                 port=8099,
                 title="LIFX SendSpin Music Visualizer",
                 reload=False,
-                show=False,           # headless for add-on
+                show=False,
                 dark=True,
             )
 
-        # Run NiceGUI in a separate thread (it manages its own loop internally)
         import threading
         threading.Thread(target=start_nicegui, daemon=True).start()
-        logger.info("Advanced NiceGUI web UI started on port 8099 (ingress)")
+        logger.info("NiceGUI web UI started on port 8099")
 
     async def run(self):
         await self.setup()
-
-        # Main loop - Sendspin client runs its own tasks internally
         try:
             while self.running:
                 await asyncio.sleep(5)
-                # Periodic health check / reconnect logic could go here
                 if self.sendspin and not self.sendspin.is_connected():
-                    logger.warning("SendSpin disconnected — attempting reconnect...")
+                    logger.warning("SendSpin disconnected — reconnecting...")
                     await self.sendspin.connect()
         except asyncio.CancelledError:
             pass
