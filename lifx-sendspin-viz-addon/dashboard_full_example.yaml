@@ -1,0 +1,107 @@
+# =====================================================
+# FULL EXAMPLE LOVELACE DASHBOARD
+# LIFX SendSpin Music Visualizer
+# =====================================================
+# Copy this into a new dashboard or merge into an existing one.
+# Replace <YOUR_ADDON_SLUG> with your actual add-on slug.
+
+title: Music Room
+icon: mdi:music
+path: music-room
+show_in_sidebar: true
+
+views:
+  - title: Visualization
+    icon: mdi:lightbulb-multiple
+    cards:
+
+      # === Header ===
+      - type: markdown
+        content: |
+          ## 🎵 LIFX Music Visualization
+          Real-time synced with Music Assistant via SendSpin
+
+      # === Main Status Row ===
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            entity: switch.lifx_music_viz_enabled
+            name: Visualization
+            icon: mdi:lightbulb-multiple
+            show_state: true
+            color_type: card
+            tap_action:
+              action: toggle
+
+          - type: entity
+            entity: sensor.lifx_music_viz_loudness
+            name: Loudness
+            icon: mdi:volume-high
+
+          - type: entity
+            entity: sensor.lifx_music_viz_beat
+            name: Beat
+            icon: mdi:music-note
+
+      # === Live Spectrum Visualizer (Best View) ===
+      - type: iframe
+        url: "/api/hassio_ingress/<YOUR_ADDON_SLUG>"
+        aspect_ratio: 16:9
+        title: "LIFX SendSpin - Live Spectrum & Controls"
+
+      # === Quick Effect Selector ===
+      - type: entities
+        title: Quick Controls
+        entities:
+          - entity: select.lifx_viz_effect   # If you create a select entity later
+            name: Visualization Effect
+          - entity: input_number.lifx_viz_sensitivity
+            name: Sensitivity
+
+      # === Energy Graph ===
+      - type: custom:mini-graph-card
+        entities:
+          - entity: sensor.lifx_music_viz_loudness
+            name: Music Energy
+        name: Energy Over Time
+        height: 120
+        line_color: "#00d4ff"
+        show:
+          extrema: true
+          fill: true
+          labels: false
+
+      # === Multizone / Light Status ===
+      - type: entities
+        title: Controlled Lights
+        entities:
+          - entity: light.living_room_left
+          - entity: light.tv_backlight
+          - entity: light.kitchen_island
+
+      # === Helpful Links ===
+      - type: markdown
+        content: |
+          **Tips:**
+          - Use the embedded visualizer above for the best live spectrum experience
+          - Try different effects like `party_strobe`, `synthwave`, or `galaxy_swirl`
+          - The add-on automatically saves/restores light states when music stops
+
+# =====================================================
+# Optional Second View: "Now Playing"
+# =====================================================
+  - title: Now Playing
+    icon: mdi:playlist-music
+    cards:
+      - type: media-control
+        entity: media_player.music_assistant
+
+      - type: entities
+        entities:
+          - entity: sensor.lifx_music_viz_loudness
+          - entity: switch.lifx_music_viz_enabled
+
+      - type: iframe
+        url: "/api/hassio_ingress/<YOUR_ADDON_SLUG>"
+        aspect_ratio: 21:9
+        title: Live Visualization
