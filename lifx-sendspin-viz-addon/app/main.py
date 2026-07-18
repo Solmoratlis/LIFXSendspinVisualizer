@@ -11,11 +11,11 @@ import time
 from typing import Any, Dict, List, Optional
 
 from lifxlan import LifxLAN
-from .lifx_controller import LifxController
-from .effects import get_effect_mapper
-from .sendspin_client import SendspinVisualizerClient
-from .web_ui import create_ui, update_viz_data, viz_state
-from .smoothing import VisualizationSmoother
+from app.lifx_controller import LifxController
+from app.effects import get_effect_mapper
+from app.sendspin_client import SendspinVisualizerClient
+from app.web_ui import create_ui, update_viz_data, viz_state
+from app.smoothing import VisualizationSmoother
 import paho.mqtt.client as mqtt
 
 # =============================================================================
