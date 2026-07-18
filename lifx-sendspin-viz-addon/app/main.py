@@ -84,8 +84,14 @@ class LifxSendspinVizApp:
 
         # SendSpin Visualizer Client (aiosendspin powered)
         self.sendspin = SendspinVisualizerClient(
-            url=os.environ.get("SENDSPIN_URL", "ws://localhost:8927/sendspin"),
-            client_name=self.config["client_name"],
+           import os
+
+# Load config from environment variables (set by run.sh)
+SENDSPIN_URL = os.getenv("SENDSPIN_URL", "ws://localhost:8927/sendspin")
+CLIENT_NAME = os.getenv("CLIENT_NAME", "LIFX Visualizer")
+EFFECT = os.getenv("EFFECT", "energy_pulse")
+SENSITIVITY = float(os.getenv("SENSITIVITY", "1.0"))
+ENABLED = os.getenv("ENABLED", "true").lower() == "true"
             visualizer_support={
                 "types": ["loudness", "beat", "f_peak", "spectrum", "peak"],
                 "buffer_capacity": 65536,
