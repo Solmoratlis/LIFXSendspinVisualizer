@@ -1,0 +1,22 @@
+name: Minimal Test Add-on
+version: "1.0.0"
+slug: minimal_test_addon
+description: Minimal test add-on to verify repository detection
+url: https://github.com/Solmoratlis/LIFXSendspinVisualizer
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+
+options:
+  message: "Hello from test add-on"
+
+schema:
+  message: str
+
+map:
+  - type: data
+    read_only: false
+    path: /data
