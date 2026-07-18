@@ -1,0 +1,109 @@
+# Sample Lovelace Dashboard Cards for LIFX SendSpin Music Visualizer
+#
+# Copy the sections you like into your dashboard.
+# These work great alongside the add-on's Web UI.
+
+# ============================================
+# 1. Simple Status + Controls Card
+# ============================================
+type: entities
+title: 🎵 LIFX Music Visualization
+entities:
+  - entity: switch.lifx_music_viz_enabled
+    name: Visualization Active
+  - entity: sensor.lifx_music_viz_loudness
+    name: Current Loudness
+  - entity: sensor.lifx_music_viz_beat
+    name: Beat Detection
+  - entity: select.lifx_viz_effect   # If you expose effect as select entity later
+
+# ============================================
+# 2. Visual "Now Visualizing" Card (using custom:button-card)
+# ============================================
+type: custom:button-card
+name: LIFX Music Viz
+icon: mdi:lightbulb-multiple
+entity: switch.lifx_music_viz_enabled
+show_state: true
+color_type: card
+color: |
+  [[[
+    if (states['switch.lifx_music_viz_enabled'].state === 'on') return 'var(--accent-color)';
+    return 'var(--disabled-color)';
+  ]]]
+styles:
+  card:
+    - padding: 12px
+  name:
+    - font-size: 18px
+    - font-weight: 600
+  icon:
+    - width: 60px
+    - height: 60px
+tap_action:
+  action: toggle
+
+# ============================================
+# 3. Embed the Add-on Web UI (Recommended)
+# ============================================
+type: iframe
+url: /api/hassio_ingress/<your-addon-slug>   # Replace with actual ingress path
+aspect_ratio: 16:9
+title: LIFX SendSpin Visualizer (Live)
+
+# ============================================
+# 4. Advanced Visual Card with Picture-Elements (Dynamic Glow)
+# ============================================
+type: picture-elements
+title: Music Visualization Status
+image: /local/images/black_background.png   # Use any dark image
+elements:
+  - type: state-icon
+    entity: switch.lifx_music_viz_enabled
+    icon: mdi:lightbulb-multiple
+    style:
+      top: 20%
+      left: 50%
+      transform: translate(-50%, -50%)
+    tap_action:
+      action: toggle
+
+  - type: state-label
+    entity: sensor.lifx_music_viz_loudness
+    prefix: "Loudness: "
+    suffix: "%"
+    style:
+      top: 45%
+      left: 50%
+      transform: translate(-50%, -50%)
+      font-size: 28px
+      font-weight: bold
+      color: white
+
+  - type: state-label
+    entity: sensor.lifx_music_viz_beat
+    prefix: ""
+    style:
+      top: 65%
+      left: 50%
+      transform: translate(-50%, -50%)
+      font-size: 22px
+      color: "#ff4444"
+      font-weight: bold
+
+# ============================================
+# 5. Mini Spectrum Visual (using custom:mini-graph-card)
+# ============================================
+type: custom:mini-graph-card
+entities:
+  - entity: sensor.lifx_music_viz_loudness
+    name: Energy
+name: Music Visualization
+height: 80
+line_color: "#00d4ff"
+show:
+  extrema: false
+  labels: false
+  legend: false
+
+# Tip: You can combine these cards into a nice "Music Room" dashboard section.
