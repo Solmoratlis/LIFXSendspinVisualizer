@@ -1,5 +1,0 @@
-aiosendspin>=5.0
-lifxlan>=1.2.0
-nicegui>=1.4.0
-python-dotenv>=1.0
-rich>=13.0
