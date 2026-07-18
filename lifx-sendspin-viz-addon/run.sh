@@ -1,18 +1,17 @@
-#!/usr/bin/with-contenv bashio
+#!/usr/bin/env bash
 # shellcheck shell=bash
 
 set -e
 
 echo "Starting LIFX SendSpin Music Visualizer Add-on..."
 
-# Load configuration with fallback values
+# Load config using bashio if available, otherwise use environment variables
 if command -v bashio &> /dev/null; then
-    SENDSPIN_URL=$(bashio::config 'sendspin_url')
-    CLIENT_NAME=$(bashio::config 'client_name')
-    EFFECT=$(bashio::config 'effect')
-    SENSITIVITY=$(bashio::config 'sensitivity')
+    SENDSPIN_URL=$(bashio::config 'sendspin_url' 2>/dev/null || echo "$SENDSPIN_URL")
+    CLIENT_NAME=$(bashio::config 'client_name' 2>/dev/null || echo "$CLIENT_NAME")
+    EFFECT=$(bashio::config 'effect' 2>/dev/null || echo "$EFFECT")
+    SENSITIVITY=$(bashio::config 'sensitivity' 2>/dev/null || echo "$SENSITIVITY")
 else
-    # Fallback values for local testing outside Home Assistant
     SENDSPIN_URL=${SENDSPIN_URL:-"ws://localhost:8927/sendspin"}
     CLIENT_NAME=${CLIENT_NAME:-"LIFX Visualizer Dev"}
     EFFECT=${EFFECT:-"energy_pulse"}
@@ -24,5 +23,5 @@ export SENDSPIN_URL CLIENT_NAME EFFECT SENSITIVITY
 echo "SendSpin URL: $SENDSPIN_URL"
 echo "Effect: $EFFECT | Sensitivity: $SENSITIVITY"
 
-# Start the main Python application
+# Start the application
 exec python3 -m app.main
