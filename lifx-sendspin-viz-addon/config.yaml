@@ -34,5 +34,17 @@ options:
   decay: 0.75
   hue_shift: 0
   enabled: true
-
+map:
+  - type: data
+    read_only: false
+    path: /data
+ports:
+  8099/tcp: 8099
+environment:
+  LOG_LEVEL: INFO
+  PYTHONUNBUFFERED: "1"
+# For local LIFX UDP discovery
+host_network: false   # Set to true if discovery issues (but prefer false for security)
+# Uncomment if you need host network for mDNS or UDP broadcast reliability
+# host_network: true
   
