@@ -1,0 +1,21 @@
+{
+  "name": "LIFXSendspinVisualizer",
+  "subtitle": ".",
+  "description": "Lifx visualizer for Music Assistant",
+  "iconURL": ".",
+  "headerURL": ".",
+ "apps": [
+  {
+    "name": "LIFXSendspinVisualizer",
+    "bundleIdentifier": "com.Solmoratlis.LIFXSendspinVisualizer",
+    "developerName": ".",
+    "version": "0.1",
+    "versionDate": "2026-07-18",
+    "downloadURL": "https://github.com/Solmoratlis/LIFXSendspinVisualizer/blob/main/lifx-sendspin-viz-addon.zip",
+    "iconURL": ".",
+    "localizedDescription": "visualizer",
+    "size": 23.7kb
+  }
+]
+  "news": []
+}
