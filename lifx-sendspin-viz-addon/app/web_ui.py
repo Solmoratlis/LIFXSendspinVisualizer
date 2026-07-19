@@ -1,186 +1,281 @@
 """
-Advanced Web UI for LIFX SendSpin Music Visualizer using NiceGUI.
-Provides a beautiful real-time dashboard with live spectrum visualization,
-controls, and status.
+Simple, reliable web UI for LIFX SendSpin Visualizer
+Works well through Home Assistant Ingress (no ES modules issues)
+Uses Starlette + Tailwind CSS
 """
-
 import asyncio
-from typing import Any, Dict, List
+import json
+import logging
+from typing import Any, Dict
 
-from nicegui import ui, app
+from starlette.applications import Starlette
+from starlette.responses import HTMLResponse, JSONResponse
+from starlette.routing import Route
 
-# Shared state (will be updated from main.py)
+logger = logging.getLogger("lifx-sendspin-viz.web_ui")
+
+# Shared state - updated by main.py via update_viz_data()
 viz_state: Dict[str, Any] = {
-    "connected": False,
-    "last_data": {},
-    "lights": [],
+    "loudness": 0.0,
+    "beat": False,
+    "spectrum": [0.0] * 8,
+    "peak": 0.0,
     "effect": "energy_pulse",
-    "sensitivity": 1.0,
     "enabled": True,
-    "frames": 0,
-    "updates_sent": 0,
+    "lights": [],
+    "stats": {"frames": 0, "beats": 0, "updates_sent": 0},
+    "connected": False,
 }
 
-def create_ui(app_instance: Any = None):
-    """Create the NiceGUI interface. Call this once at startup."""
 
-    ui.page_title("LIFX SendSpin Music Visualizer")
-    ui.dark_mode()
-
-    with ui.header().classes("bg-zinc-900"):
-        ui.label("🎵 LIFX Music Visualizer").classes("text-2xl font-bold")
-        ui.space()
-        ui.label("Powered by SendSpin + Music Assistant").classes("text-sm opacity-70")
-
-    with ui.row().classes("w-full gap-4 p-4"):
-        # === Left column: Status & Controls ===
-        with ui.card().classes("w-80"):
-            ui.label("Status").classes("text-lg font-semibold mb-2")
-
-            status_label = ui.label().bind_text_from(
-                viz_state, "connected",
-                backward=lambda c: "🟢 Connected to SendSpin" if c else "🔴 Disconnected"
-            )
-
-            ui.separator()
-
-            with ui.row():
-                ui.label("Effect:")
-                effect_select = ui.select(
-                    ["energy_pulse", "spectrum_bands", "dominant_hue", "beat_strobe"],
-                    value=viz_state["effect"],
-                    on_change=lambda e: update_config("effect", e.value)
-                ).classes("w-full")
-
-            with ui.row().classes("items-center"):
-                ui.label("Sensitivity")
-                sensitivity_slider = ui.slider(
-                    min=0.1, max=3.0, step=0.1, value=viz_state["sensitivity"],
-                    on_change=lambda e: update_config("sensitivity", e.value)
-                ).classes("w-full")
-                ui.label().bind_text_from(sensitivity_slider, "value", lambda v: f"{v:.1f}")
-
-            ui.switch("Visualization Enabled", value=viz_state["enabled"],
-                      on_change=lambda e: update_config("enabled", e.value))
-
-            ui.button("Reconnect to SendSpin", on_click=reconnect).classes("w-full mt-2")
-
-            ui.separator().classes("my-2")
-
-            ui.label("Statistics").classes("font-semibold")
-            ui.label().bind_text_from(
-                viz_state, "frames", lambda f: f"Frames processed: {f}"
-            )
-            ui.label().bind_text_from(
-                viz_state, "updates_sent", lambda u: f"Light updates sent: {u}"
-            )
-
-        # === Middle: Live Spectrum ===
-        with ui.card().classes("flex-1"):
-            ui.label("Live Spectrum Analyzer").classes("text-lg font-semibold mb-2")
-
-            spectrum_container = ui.row().classes("w-full h-48 items-end gap-1 px-2")
-
-            # Create 8 initial bars (will be updated dynamically)
-            bars: List[ui.element] = []
-            for i in range(8):
-                bar = ui.element("div").classes(
-                    "flex-1 bg-gradient-to-t from-blue-500 to-cyan-400 rounded-t transition-all duration-75"
-                ).style("height: 10%; min-height: 4px;")
-                bars.append(bar)
-
-            # Store bars in state for updating
-            viz_state["_bars"] = bars
-
-            ui.label("Low → High Frequency").classes("text-xs text-center opacity-60 mt-1")
-
-            # Current metrics row
-            with ui.row().classes("w-full justify-between mt-4 text-sm"):
-                ui.label().bind_text_from(
-                    viz_state, "last_data",
-                    backward=lambda d: f"Loudness: {int(d.get('loudness', 0) / 65535 * 100)}%"
-                )
-                ui.label().bind_text_from(
-                    viz_state, "last_data",
-                    backward=lambda d: f"Dominant: {d.get('f_peak', {}).get('freq', 0)} Hz"
-                )
-                beat_label = ui.label().bind_text_from(
-                    viz_state, "last_data",
-                    backward=lambda d: "🥁 BEAT!" if d.get("beat", {}).get("flags", 0) else ""
-                ).classes("text-red-400 font-bold")
-
-        # === Right: Controlled Lights ===
-        with ui.card().classes("w-72"):
-            ui.label("Controlled Lights").classes("text-lg font-semibold mb-2")
-
-            lights_container = ui.column().classes("w-full")
-
-            def refresh_lights():
-                lights_container.clear()
-                for light_name in viz_state.get("lights", []):
-                    with lights_container:
-                        with ui.row().classes("items-center"):
-                            ui.icon("lightbulb", color="amber").classes("mr-2")
-                            ui.label(light_name)
-
-            refresh_lights()
-            ui.button("Refresh Lights", on_click=refresh_lights).classes("w-full mt-2 text-xs")
-
-    # Footer
-    with ui.footer().classes("bg-zinc-900"):
-        ui.label("Tip: Play music in Music Assistant → lights react automatically").classes("text-xs opacity-60")
-
-    # Periodic UI updater
-    async def update_ui():
-        while True:
-            await asyncio.sleep(0.15)  # ~7 fps UI refresh is smooth enough
-
-            # Update spectrum bars from last_data
-            last = viz_state.get("last_data", {})
-            spectrum = last.get("spectrum", [])
-            bars = viz_state.get("_bars", [])
-
-            if spectrum and bars:
-                n = min(len(spectrum), len(bars))
-                for i in range(n):
-                    magnitude = spectrum[i] / 65535.0
-                    height = max(4, int(magnitude * 180))  # px
-                    bars[i].style(f"height: {height}px;")
-
-            # Force NiceGUI to refresh bindings
-            ui.refresh()
-
-    # Start the background updater
-    ui.timer(0.2, update_ui, active=True)
-
-    # Expose a way to update state from outside (called by main.py)
-    app.on_startup(lambda: None)  # placeholder
-
-
-def update_config(key: str, value: Any):
-    """Update config and notify main app (in real version this would call back)."""
-    viz_state[key] = value
-    print(f"[WebUI] Config updated: {key} = {value}")
-    # In a full implementation, this would trigger the main app to reload config
-
-
-async def reconnect():
-    """Trigger reconnect from UI."""
-    print("[WebUI] Reconnect requested")
-    # This would call into the main app's reconnect logic
-    viz_state["connected"] = False  # temporary visual feedback
-    await asyncio.sleep(1)
-    viz_state["connected"] = True
-
-
-# Convenience function to update visualization data from main loop
-def update_viz_data(data: Dict[str, Any], stats: Dict[str, int], connected: bool = True):
-    """Call this from main.py whenever new visualization data arrives."""
-    viz_state["last_data"] = data
-    viz_state["frames"] = stats.get("frames", 0)
-    viz_state["updates_sent"] = stats.get("updates_sent", 0)
+def update_viz_data(data: Dict[str, Any], stats: Dict[str, Any], connected: bool = True):
+    """Called from main.py to push live visualization data to the UI."""
+    viz_state["loudness"] = float(data.get("loudness", 0.0))
+    viz_state["beat"] = bool(data.get("beat", False))
+    viz_state["spectrum"] = data.get("spectrum", [0.0] * 8)
+    viz_state["peak"] = float(data.get("peak", 0.0))
+    viz_state["stats"] = stats
     viz_state["connected"] = connected
 
-    # Also update lights list if provided
-    if "lights" in data:
-        viz_state["lights"] = data["lights"]
+
+async def status_endpoint(request):
+    """JSON endpoint for the frontend to poll."""
+    return JSONResponse(viz_state)
+
+
+async def index(request):
+    """Main dashboard HTML page."""
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIFX SendSpin • Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: system_ui, sans-serif; }
+        .bar { transition: height 80ms linear; }
+        .beat-flash { animation: flash 120ms ease-out; }
+        @keyframes flash {
+            0% { background-color: #f87171; box-shadow: 0 0 15px #f87171; }
+            100% { background-color: #334155; }
+        }
+        .metric { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-200 p-6">
+    <div class="max-w-[1100px] mx-auto">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
+                    <span class="text-slate-950 font-black text-xl">L</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-semibold tracking-tight">LIFX SendSpin</h1>
+                    <p class="text-xs text-slate-500 -mt-1">Music Visualizer</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div id="conn-status"
+                     class="text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/30">
+                    <div class="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
+                    DISCONNECTED
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            
+            <!-- Loudness -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5">
+                <div class="flex justify-between items-baseline mb-3">
+                    <div class="text-xs tracking-[1px] text-slate-500">LOUDNESS</div>
+                    <div id="loudness-val" class="metric text-4xl font-semibold text-white tabular-nums">0.00</div>
+                </div>
+                <div class="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="loudness-bar" 
+                         class="h-2.5 bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 rounded-full transition-all duration-100"
+                         style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Beat -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5">
+                <div class="flex justify-between items-baseline mb-3">
+                    <div class="text-xs tracking-[1px] text-slate-500">BEAT</div>
+                    <div id="beat-val" class="metric text-4xl font-semibold text-white">—</div>
+                </div>
+                <div id="beat-box"
+                     class="h-2.5 bg-slate-800 rounded-full flex items-center justify-center text-[10px] font-mono tracking-[1.5px] text-slate-500">
+                    LISTENING
+                </div>
+            </div>
+
+            <!-- Peak -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5">
+                <div class="flex justify-between items-baseline mb-3">
+                    <div class="text-xs tracking-[1px] text-slate-500">PEAK</div>
+                    <div id="peak-val" class="metric text-4xl font-semibold text-white tabular-nums">0.00</div>
+                </div>
+                <div class="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="peak-bar" 
+                         class="h-2.5 bg-gradient-to-r from-violet-400 to-fuchsia-400 rounded-full transition-all duration-100"
+                         style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spectrum -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <span class="text-sm font-medium">SPECTRUM</span>
+                    <span class="ml-2 text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-500">8 BANDS</span>
+                </div>
+                <div class="text-[10px] text-slate-500">LOW → HIGH</div>
+            </div>
+            
+            <div class="flex items-end justify-between gap-2 h-[210px]" id="spectrum-container">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+            <div>
+                Effect: <span id="effect-name" class="font-mono text-white">—</span>
+            </div>
+            <div class="flex gap-6">
+                <div>Frames: <span id="stat-frames" class="font-mono text-white">0</span></div>
+                <div>Updates: <span id="stat-updates" class="font-mono text-white">0</span></div>
+            </div>
+            <div id="light-count">0 lights connected</div>
+        </div>
+
+    </div>
+
+    <script>
+        let lastBeat = false;
+
+        function updateUI(data) {
+            // Loudness
+            const l = data.loudness || 0;
+            document.getElementById('loudness-val').innerText = l.toFixed(2);
+            document.getElementById('loudness-bar').style.width = (l * 100) + '%';
+
+            // Beat
+            const beat = !!data.beat;
+            const beatBox = document.getElementById('beat-box');
+            const beatVal = document.getElementById('beat-val');
+            
+            if (beat && !lastBeat) {
+                beatBox.classList.add('beat-flash', '!bg-red-500', '!text-white');
+                beatBox.innerText = 'BEAT!';
+                beatVal.innerText = 'YES';
+                setTimeout(() => {
+                    beatBox.classList.remove('beat-flash', '!bg-red-500', '!text-white');
+                    beatBox.innerText = 'LISTENING';
+                }, 160);
+            } else if (!beat) {
+                beatVal.innerText = '—';
+            }
+            lastBeat = beat;
+
+            // Peak
+            const p = data.peak || 0;
+            document.getElementById('peak-val').innerText = p.toFixed(2);
+            document.getElementById('peak-bar').style.width = (p * 100) + '%';
+
+            // Spectrum
+            const spec = data.spectrum || [0,0,0,0,0,0,0,0];
+            const container = document.getElementById('spectrum-container');
+            container.innerHTML = '';
+            
+            spec.forEach(val => {
+                const bar = document.createElement('div');
+                bar.className = 'flex-1 bg-gradient-to-t from-cyan-400 to-blue-500 rounded-t bar min-h-[3px]';
+                bar.style.height = Math.max(3, (val || 0) * 100) + '%';
+                container.appendChild(bar);
+            });
+
+            // Effect
+            document.getElementById('effect-name').innerText = data.effect || '—';
+
+            // Stats
+            const st = data.stats || {};
+            document.getElementById('stat-frames').innerText = st.frames || 0;
+            document.getElementById('stat-updates').innerText = st.updates_sent || 0;
+
+            // Lights
+            document.getElementById('light-count').innerText = (data.lights || []).length + ' lights';
+
+            // Connection
+            const conn = document.getElementById('conn-status');
+            if (data.connected) {
+                conn.className = 'text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30';
+                conn.innerHTML = `<div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div> CONNECTED`;
+            } else {
+                conn.className = 'text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/30';
+                conn.innerHTML = `<div class="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div> DISCONNECTED`;
+            }
+        }
+
+        async function poll() {
+            try {
+                const r = await fetch('/status');
+                if (r.ok) {
+                    const d = await r.json();
+                    updateUI(d);
+                }
+            } catch (_) {}
+        }
+
+        function init() {
+            // Create 8 empty bars initially
+            const c = document.getElementById('spectrum-container');
+            for (let i = 0; i < 8; i++) {
+                const b = document.createElement('div');
+                b.className = 'flex-1 bg-slate-700 rounded-t bar min-h-[3px]';
+                b.style.height = '3px';
+                c.appendChild(b);
+            }
+            poll();
+            setInterval(poll, 220);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
+
+def create_ui(app_context=None):
+    """Start the simple web UI server (call this from main.py)."""
+    routes = [
+        Route("/", index),
+        Route("/status", status_endpoint),
+    ]
+
+    app = Starlette(routes=routes)
+
+    import uvicorn
+    config = uvicorn.Config(
+        app,
+        host="0.0.0.0",
+        port=8099,
+        log_level="warning",
+        access_log=False,
+    )
+    server = uvicorn.Server(config)
+
+    import threading
+    t = threading.Thread(target=server.run, daemon=True)
+    t.start()
+
+    logger.info("Simple web UI ready on port 8099 (Ingress compatible)")
+    return server
