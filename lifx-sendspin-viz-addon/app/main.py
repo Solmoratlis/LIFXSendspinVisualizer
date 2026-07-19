@@ -243,11 +243,14 @@ if __name__ == "__main__":
     ui.timer(0.1, startup, once=True)
 
     ui.run(
-        host="0.0.0.0",
-        port=8099,
-        title="LIFX SendSpin Music Visualizer",
-        reload=False,
-        show=False,
-        dark=True,
-        storage_secret="lifx-sendspin-secret-98765",
-    )
+    host="0.0.0.0",
+    port=8099,
+    title="LIFX SendSpin Music Visualizer",
+    reload=False,
+    show=False,
+    dark=True,
+    storage_secret="lifx-sendspin-secret-98765",
+    uvicorn_logging_level="warning",
+    # These help with reverse proxies / ingress
+    forwarded_allow_ips="*",
+)
