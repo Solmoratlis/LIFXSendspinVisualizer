@@ -1,0 +1,65 @@
+# =============================================================================
+# LIFX SendSpin Music Visualizer - Configuration
+# =============================================================================
+
+sendspin:
+  url: "ws://homeassistant.local:8927/sendspin"
+  client_name: "LIFX Visualizer"
+  # psk: "optional-pre-shared-key-if-required"
+  reconnect_delay_sec: 5
+  # max_reconnect_attempts: 0   # 0 = unlimited
+
+lifx:
+  discover_all: true
+  # light_labels: ["Living Room", "Kitchen Island"]
+  # mac_addresses: ["d0:73:d5:xx:xx:xx"]
+  # Prefer specific lights when discover_all is false
+
+visualization:
+  # ---------------------------------------------------------------------------
+  # Available effects (pick one):
+  #   energy_pulse, spectrum_bands, dominant_hue, beat_strobe, rainbow_energy,
+  #   bass_punch, calm_ambient, party_strobe, fire_pulse, ice_cool, synthwave,
+  #   galaxy_swirl, matrix_rain, heartbeat_pulse, neon_grid, disco_ball,
+  #   frequency_sweep, sunrise_sunset, ocean_wave, lava_lamp, cyberpunk,
+  #   aurora, pulse_chase, mono_white, mono_warm, mono_cool, random_hue
+  # ---------------------------------------------------------------------------
+  effect: "energy_pulse"
+
+  # Overall reactivity (0.1 = subtle, 2.0+ = aggressive)
+  sensitivity: 1.0
+
+  # How often to push colors to LIFX (Hz)
+  update_rate_hz: 15
+
+  # Brightness limits (percent)
+  brightness_min: 5
+  brightness_max: 100
+
+  # Master enable
+  enabled: true
+
+  # Transition time applied when effect does not override it (ms)
+  default_transition_ms: 70
+
+  # Saturation boost (0.5 – 1.5). 1.0 = effect default
+  saturation_scale: 1.0
+
+  # Optional hue offset in degrees (0 – 360)
+  hue_shift_deg: 0
+
+  # When true, flash hard on every beat (many effects already do this)
+  force_beat_flash: false
+
+  # Spectrum behaviour
+  spectrum_bins: 8
+  # How strongly spectrum influences effects that use it (0 – 2)
+  spectrum_weight: 1.0
+
+web:
+  host: "0.0.0.0"
+  port: 8099
+
+logging:
+  level: "INFO"          # DEBUG, INFO, WARNING, ERROR
+  # log_frames: false    # set true for very verbose frame logging

@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  lifx-sendspin:
+    build: .
+    container_name: lifx-sendspin-visualizer
+    restart: unless-stopped
+    network_mode: host          # needed for LIFX discovery + local MA access
+    environment:
+      - SENDSPIN_URL=ws://homeassistant.local:8927/sendspin
+      - CLIENT_NAME=LIFX Visualizer
+      - EFFECT=energy_pulse
+      - SENSITIVITY=1.0
+      - ENABLED=true
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    # ports are not needed when using host network
+    # ports:
+    #   - "8099:8099"
