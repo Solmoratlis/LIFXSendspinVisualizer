@@ -1,8 +1,0 @@
-aiosendspin>=6.0.0
-lifxlan>=1.2.0
-starlette>=0.37.0
-uvicorn[standard]>=0.30.0
-paho-mqtt>=2.0
-python-dotenv>=1.0
-rich>=13.0
-watchdog>=4.0  # for config hot-reload
