@@ -229,4 +229,29 @@ async def main():
 # ENTRY POINT - Let NiceGUI manage the event loop
 # =============================================================================
 if __name__ == "__main__":
-    
+  from nicegui import ui
+
+    async def startup():
+        app = LifxSendspinVizApp()
+        await app.setup()
+
+        # Keep the app alive
+        while getattr(app, "running", True):
+            await asyncio.sleep(1)
+
+    # Start the app setup when NiceGUI is ready
+    ui.timer(0.1, startup, once=True)
+
+    ui.run(
+    host="0.0.0.0",
+    port=8099,
+    title="LIFX SendSpin Music Visualizer",
+    reload=False,
+    show=False,
+    dark=True,
+    storage_secret="lifx-sendspin-secret-98765",
+    uvicorn_logging_level="warning",
+    # These help with reverse proxies / ingress
+    forwarded_allow_ips="*",
+)
+  
